@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -12,11 +12,12 @@
  * on any nested value which defines it.
  */
 export default function toJSONDeep<T>(value: T): T {
-  if (!value || typeof value !== 'object') {
+  if (value == null || typeof value !== 'object') {
     return value;
   }
 
   if (typeof value.toJSON === 'function') {
+    // $FlowFixMe(>=0.90.0)
     return value.toJSON();
   }
 
@@ -25,10 +26,8 @@ export default function toJSONDeep<T>(value: T): T {
   }
 
   const result: any = {};
-  for (const prop in value) {
-    if (value.hasOwnProperty(prop)) {
-      result[prop] = toJSONDeep(value[prop]);
-    }
+  for (const prop of Object.keys(value)) {
+    result[prop] = toJSONDeep(value[prop]);
   }
   return result;
 }

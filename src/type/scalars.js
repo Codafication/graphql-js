@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -7,10 +7,10 @@
  * @flow strict
  */
 
+import isFinite from '../polyfills/isFinite';
+import isInteger from '../polyfills/isInteger';
 import inspect from '../jsutils/inspect';
-import isFinite from '../jsutils/isFinite';
-import isInteger from '../jsutils/isInteger';
-import { GraphQLScalarType, isNamedType } from './definition';
+import { GraphQLScalarType, isScalarType } from './definition';
 import { Kind } from '../language/kinds';
 
 // As per the GraphQL Spec, Integers are only treated as valid when a valid
@@ -107,7 +107,7 @@ export const GraphQLFloat = new GraphQLScalarType({
   description:
     'The `Float` scalar type represents signed double-precision fractional ' +
     'values as specified by ' +
-    '[IEEE 754](http://en.wikipedia.org/wiki/IEEE_floating_point). ',
+    '[IEEE 754](https://en.wikipedia.org/wiki/IEEE_floating_point). ',
   serialize: serializeFloat,
   parseValue: coerceFloat,
   parseLiteral(ast) {
@@ -129,6 +129,7 @@ function serializeObject(value: mixed): mixed {
       }
     }
     if (typeof value.toJSON === 'function') {
+      // $FlowFixMe(>=0.90.0)
       return value.toJSON();
     }
   }
@@ -254,13 +255,7 @@ export const specifiedScalarTypes: $ReadOnlyArray<*> = [
 
 export function isSpecifiedScalarType(type: mixed): boolean %checks {
   return (
-    isNamedType(type) &&
-    // Would prefer to use specifiedScalarTypes.some(), however %checks needs
-    // a simple expression.
-    (type.name === GraphQLString.name ||
-      type.name === GraphQLInt.name ||
-      type.name === GraphQLFloat.name ||
-      type.name === GraphQLBoolean.name ||
-      type.name === GraphQLID.name)
+    isScalarType(type) &&
+    specifiedScalarTypes.some(({ name }) => type.name === name)
   );
 }

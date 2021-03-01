@@ -1,8 +1,10 @@
 /**
- * Copyright (c) 2015-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @noflow
  */
 
 'use strict';
@@ -19,38 +21,34 @@
  *  !<cond> ? invariant(0, ...) : undefined;
  */
 module.exports = function inlineInvariant(context) {
-  const t = context.types;
+  const replaceTemplate = context.template(`
+    if (!%%cond%%) {
+      invariant(0, %%args%%);
+    }
+  `);
 
   return {
     visitor: {
-      CallExpression: function(path) {
-        var node = path.node;
-        var parent = path.parent;
+      CallExpression(path) {
+        const node = path.node;
+        const parent = path.parent;
 
         if (!isAppropriateInvariantCall(node, parent)) {
           return;
         }
 
-        var args = node.arguments.slice(0);
-        args[0] = t.numericLiteral(0);
-
-        path.replaceWith(t.ifStatement(
-          t.unaryExpression('!', node.arguments[0]),
-          t.expressionStatement(
-            t.callExpression(
-              t.identifier(node.callee.name),
-              args
-            )
-          )
-        ));
+        const [cond, args] = node.arguments;
+        path.replaceWith(replaceTemplate({ cond, args }));
       },
     },
   };
 };
 
 function isAppropriateInvariantCall(node, parent) {
-  return node.callee.type === 'Identifier'
-      && node.callee.name === 'invariant'
-      && node.arguments.length > 0
-      && parent.type === 'ExpressionStatement';
+  return (
+    node.callee.type === 'Identifier' &&
+    node.callee.name === 'invariant' &&
+    node.arguments.length > 0 &&
+    parent.type === 'ExpressionStatement'
+  );
 }

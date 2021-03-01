@@ -1,10 +1,10 @@
 /**
- * Copyright (c) 2015-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @noflow
+ * @flow strict
  */
 
 import { expect } from 'chai';
@@ -111,7 +111,7 @@ async function createSubscription(pubsub, schema = emailSchema, ast, vars) {
     });
   }
 
-  const defaultAst = parse(`
+  const defaultAST = parse(`
     subscription ($priority: Int = 0) {
       importantEmail(priority: $priority) {
         email {
@@ -129,7 +129,8 @@ async function createSubscription(pubsub, schema = emailSchema, ast, vars) {
   // `subscribe` returns Promise<AsyncIterator | ExecutionResult>
   return {
     sendImportantEmail,
-    subscription: await subscribe(schema, ast || defaultAst, data, null, vars),
+    // $FlowFixMe
+    subscription: await subscribe(schema, ast || defaultAST, data, null, vars),
   };
 }
 
@@ -163,6 +164,7 @@ describe('Subscription Initialization Phase', () => {
       },
     });
 
+    // $FlowFixMe
     ai.return();
   });
 
@@ -224,6 +226,7 @@ describe('Subscription Initialization Phase', () => {
       importantEmail: {},
     });
 
+    // $FlowFixMe
     await subscription.next();
   });
 
@@ -257,6 +260,7 @@ describe('Subscription Initialization Phase', () => {
       importantEmail: {},
     });
 
+    // $FlowFixMe
     await subscription.next();
   });
 
@@ -297,6 +301,7 @@ describe('Subscription Initialization Phase', () => {
     `);
 
     const subscription = await subscribe(testSchema, ast);
+    // $FlowFixMe
     subscription.next(); // Ask for a result, but ignore it.
 
     expect(didResolveImportantEmail).to.equal(true);
@@ -314,11 +319,13 @@ describe('Subscription Initialization Phase', () => {
     `);
 
     await expectPromiseToThrow(
+      // $DisableFlowOnNegativeTest
       () => subscribe(null, document),
       'Expected null to be a GraphQL schema.',
     );
 
     await expectPromiseToThrow(
+      // $DisableFlowOnNegativeTest
       () => subscribe({ document }),
       'Expected undefined to be a GraphQL schema.',
     );
@@ -326,11 +333,13 @@ describe('Subscription Initialization Phase', () => {
 
   it('throws an error if document is missing', async () => {
     await expectPromiseToThrow(
+      // $DisableFlowOnNegativeTest
       () => subscribe(emailSchema, null),
       'Must provide document',
     );
 
     await expectPromiseToThrow(
+      // $DisableFlowOnNegativeTest
       () => subscribe({ schema: emailSchema }),
       'Must provide document',
     );
@@ -381,9 +390,9 @@ describe('Subscription Initialization Phase', () => {
 
   it('resolves to an error for subscription resolver errors', async () => {
     // Returning an error
-    const subscriptionReturningErrorSchema = emailSchemaWithResolvers(() => {
-      return new Error('test error');
-    });
+    const subscriptionReturningErrorSchema = emailSchemaWithResolvers(
+      () => new Error('test error'),
+    );
     await testReportsError(subscriptionReturningErrorSchema);
 
     // Throwing an error
@@ -394,9 +403,7 @@ describe('Subscription Initialization Phase', () => {
 
     // Resolving to an error
     const subscriptionResolvingErrorSchema = emailSchemaWithResolvers(
-      async () => {
-        return new Error('test error');
-      },
+      async () => new Error('test error'),
     );
     await testReportsError(subscriptionResolvingErrorSchema);
 
@@ -467,6 +474,7 @@ describe('Subscription Initialization Phase', () => {
       },
     };
 
+    // $FlowFixMe
     const result = await subscribe(emailSchema, ast, data, null, {
       priority: 'meow',
     });
@@ -475,8 +483,7 @@ describe('Subscription Initialization Phase', () => {
       errors: [
         {
           message:
-            'Variable "$priority" got invalid value "meow"; Expected ' +
-            'type Int; Int cannot represent non-integer value: "meow"',
+            'Variable "$priority" got invalid value "meow"; Expected type Int; Int cannot represent non-integer value: "meow"',
           locations: [{ line: 2, column: 21 }],
         },
       ],
@@ -834,6 +841,7 @@ describe('Subscription Publish Phase', () => {
       `),
     );
 
+    // $FlowFixMe
     const payload1 = await subscription.next();
     expect(payload1).to.deep.equal({
       done: false,
@@ -905,6 +913,7 @@ describe('Subscription Publish Phase', () => {
       `),
     );
 
+    // $FlowFixMe
     const payload1 = await subscription.next();
     expect(payload1).to.deep.equal({
       done: false,
@@ -927,7 +936,7 @@ describe('Subscription Publish Phase', () => {
     }
 
     expect(expectedError).to.be.instanceof(Error);
-    expect(expectedError.message).to.equal('test error');
+    expect(expectedError).to.have.property('message', 'test error');
 
     const payload2 = await subscription.next();
     expect(payload2).to.deep.equal({

@@ -1,10 +1,10 @@
 /**
- * Copyright (c) 2015-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @noflow
+ * @flow strict
  */
 
 import { expect } from 'chai';
@@ -23,6 +23,9 @@ import {
 } from '../../type';
 
 class Dog {
+  name: string;
+  barks: boolean;
+
   constructor(name, barks) {
     this.name = name;
     this.barks = barks;
@@ -30,6 +33,9 @@ class Dog {
 }
 
 class Cat {
+  name: string;
+  meows: boolean;
+
   constructor(name, meows) {
     this.name = name;
     this.meows = meows;
@@ -37,6 +43,10 @@ class Cat {
 }
 
 class Person {
+  name: string;
+  pets: ?Array<Dog | Cat>;
+  friends: ?Array<Dog | Cat | Person>;
+
   constructor(name, pets, friends) {
     this.name = name;
     this.pets = pets;
@@ -240,7 +250,7 @@ describe('Execute: Union and intersection types', () => {
     });
   });
 
-  it('executes union types with inline fragments', () => {
+  it('executes interface types with inline fragments', () => {
     // This is the valid version of the query in the above test.
     const ast = parse(`
       {

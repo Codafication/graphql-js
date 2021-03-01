@@ -1,27 +1,30 @@
 /**
- * Copyright (c) 2015-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @noflow
  */
+
+'use strict';
 
 const sane = require('sane');
 const { resolve: resolvePath } = require('path');
 const { spawn } = require('child_process');
 const flowBinPath = require('flow-bin');
 
-
 process.env.PATH += ':./node_modules/.bin';
 
-var cmd = resolvePath(__dirname);
-var srcDir = resolvePath(cmd, '../src');
+const cmd = resolvePath(__dirname);
+const srcDir = resolvePath(cmd, '../src');
 
 function exec(command, options) {
   return new Promise((resolve, reject) => {
-    var child = spawn(command, options, {
-      cmd: cmd,
+    const child = spawn(command, options, {
+      cmd,
       env: process.env,
-      stdio: 'inherit'
+      stdio: 'inherit',
     });
     child.on('exit', code => {
       if (code === 0) {
@@ -33,12 +36,12 @@ function exec(command, options) {
   });
 }
 
-var flowServer = spawn(flowBinPath, ['server'], {
-  cmd: cmd,
-  env: process.env
+const flowServer = spawn(flowBinPath, ['server'], {
+  cmd,
+  env: process.env,
 });
 
-var watcher = sane(srcDir, { glob: ['**/*.js', '**/*.graphql'] })
+const watcher = sane(srcDir, { glob: ['**/*.js', '**/*.graphql'] })
   .on('ready', startWatch)
   .on('add', changeFile)
   .on('delete', deleteFile)
@@ -51,10 +54,10 @@ process.on('SIGINT', () => {
   process.exit();
 });
 
-var isChecking;
-var needsCheck;
-var toCheck = {};
-var timeout;
+let isChecking;
+let needsCheck;
+let toCheck = {};
+let timeout;
 
 function startWatch() {
   process.stdout.write(CLEARSCREEN + green(invert('watching...')));
@@ -83,7 +86,7 @@ function guardedCheck() {
     return;
   }
   isChecking = true;
-  var filepaths = Object.keys(toCheck);
+  const filepaths = Object.keys(toCheck);
   toCheck = {};
   needsCheck = false;
   checkFiles(filepaths).then(() => {
@@ -95,66 +98,39 @@ function guardedCheck() {
 function checkFiles(filepaths) {
   console.log('\u001b[2J');
 
-  return parseFiles(filepaths)
-    .then(() => runTests(filepaths))
-    .then(testSuccess => lintFiles(filepaths)
-      .then(lintSuccess => typecheckStatus()
-        .then(typecheckSuccess =>
-          testSuccess && lintSuccess && typecheckSuccess)))
+  return runTests(filepaths)
+    .then(testSuccess =>
+      lintFiles().then(lintSuccess =>
+        typecheckStatus().then(
+          typecheckSuccess => testSuccess && lintSuccess && typecheckSuccess,
+        ),
+      ),
+    )
     .catch(() => false)
     .then(success => {
       process.stdout.write(
-        '\n' + (success ? '' : '\x07') + green(invert('watching...'))
+        '\n' + (success ? '' : '\x07') + green(invert('watching...')),
       );
     });
 }
 
 // Checking steps
-
-function parseFiles(filepaths) {
-  console.log('Checking Syntax');
-
-  return Promise.all(filepaths.map(filepath => {
-    if (isJS(filepath) && !isTest(filepath)) {
-      return exec('babel', [
-        '--optional', 'runtime',
-        '--out-file', '/dev/null',
-        srcPath(filepath)
-      ]);
-    }
-  }));
-}
-
 function runTests(filepaths) {
   console.log('\nRunning Tests');
 
-  return exec('mocha', [
-    '--reporter', 'progress',
-    '--require', '@babel/register',
-    '--require', '@babel/polyfill',
-  ].concat(
-    allTests(filepaths) ?
-      filepaths.map(srcPath) :
-      ['src/**/__tests__/**/*-test.js']
-  )).catch(() => false);
+  return exec(
+    'mocha',
+    ['--reporter', 'progress'].concat(
+      allTests(filepaths)
+        ? filepaths.map(srcPath)
+        : ['src/**/__tests__/**/*-test.js'],
+    ),
+  ).catch(() => false);
 }
 
-function lintFiles(filepaths) {
+function lintFiles() {
   console.log('Linting Code\n');
-
-  return filepaths.reduce((prev, filepath) => prev.then(prevSuccess => {
-    if (isJS(filepath)) {
-      process.stdout.write('  ' + filepath + ' ...');
-      return exec('eslint', [srcPath(filepath)])
-        .catch(() => false)
-        .then(success => {
-          console.log(CLEARLINE + '  ' + (success ? CHECK : X)
-            + ' ' + filepath);
-          return prevSuccess && success;
-        });
-    }
-    return prevSuccess;
-  }), Promise.resolve(true));
+  return exec('eslint', ['--cache', 'src/']).catch(() => false);
 }
 
 function typecheckStatus() {
@@ -170,15 +146,11 @@ function srcPath(filepath) {
 
 // Predicates
 
-function isJS(filepath) {
-  return filepath.indexOf('.js') === filepath.length - 3;
-}
-
 function allTests(filepaths) {
   return filepaths.length > 0 && filepaths.every(isTest);
 }
 
-var TEST_PATH_RX = /^(?:.*?\/)?__tests__\/.+?-test\.js$/;
+const TEST_PATH_RX = /^(?:.*?\/)?__tests__\/.+?-test\.js$/;
 
 function isTest(filepath) {
   return TEST_PATH_RX.test(filepath);
@@ -186,17 +158,11 @@ function isTest(filepath) {
 
 // Print helpers
 
-var CLEARSCREEN = '\u001b[2J';
-var CLEARLINE = '\r\x1B[K';
-var CHECK = green('\u2713');
-var X = red('\u2718');
+const CLEARSCREEN = '\u001b[2J';
+const CLEARLINE = '\r\x1B[K';
 
 function invert(str) {
   return `\u001b[7m ${str} \u001b[27m`;
-}
-
-function red(str) {
-  return `\x1B[K\u001b[1m\u001b[31m${str}\u001b[39m\u001b[22m`;
 }
 
 function green(str) {
